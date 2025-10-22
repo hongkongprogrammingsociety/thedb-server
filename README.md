@@ -160,4 +160,4 @@ This is an educational database system. Not recommended for production use.
 
 ## License
 
-MIT License
+Apache License
