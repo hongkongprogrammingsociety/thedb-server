@@ -12,10 +12,27 @@ public class SQLASTBuilder extends SQLParserBaseVisitor<ASTNode> {
     @Override
     public ASTNode visitSqlStatements(SQLParser.SqlStatementsContext ctx) {
         if (ctx.sqlStatement() != null && !ctx.sqlStatement().isEmpty()) {
-			System.out.println(">>>" +visit(ctx.sqlStatement(0)).getClass().getSimpleName());
-            return visit(ctx.sqlStatement(0));
+            ASTNode result = visit(ctx.sqlStatement(0));
+            if (result != null) {
+                System.out.println(">>>" + result.getClass().getSimpleName());
+            }
+            return result;
         }
         return null;
+    }
+    
+    @Override
+    public ASTNode visitDdlStatement(SQLParser.DdlStatementContext ctx) {
+        // For now, return a placeholder node for DDL statements
+        // TODO: Implement proper AST nodes for CREATE TABLE, DROP TABLE, etc.
+        return new PlaceholderNode("DDL: " + ctx.getText());
+    }
+    
+    @Override
+    public ASTNode visitUtilityStatement(SQLParser.UtilityStatementContext ctx) {
+        // For now, return a placeholder node for utility statements
+        // TODO: Implement proper AST nodes for SHOW TABLES, DESCRIBE, etc.
+        return new PlaceholderNode("UTILITY: " + ctx.getText());
     }
     
     @Override
