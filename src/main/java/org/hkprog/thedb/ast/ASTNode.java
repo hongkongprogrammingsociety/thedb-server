@@ -60,6 +60,7 @@ public interface ASTNode {
         COLUMN_DEFINITION,
         TABLE_CONSTRAINT,
         DATA_TYPE,
-        PLACEHOLDER
+        PLACEHOLDER,
+        STATEMENT_LIST
     }
 }

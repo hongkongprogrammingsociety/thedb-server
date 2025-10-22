@@ -40,4 +40,5 @@ public interface ASTVisitor<T> {
     T visitColumnDefinition(ColumnDefinitionNode node);
     T visitTableConstraint(TableConstraintNode node);
     T visitPlaceholder(PlaceholderNode node);
+    T visitStatementList(StatementListNode node);
 }

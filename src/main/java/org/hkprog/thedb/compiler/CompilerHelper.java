@@ -81,6 +81,56 @@ public class CompilerHelper {
 		} else if (node instanceof CreateTableStatementNode) {
 			CreateTableStatementNode create = (CreateTableStatementNode) node;
 			return className + " (table: " + create.getTableName() + ")";
+		} else if (node instanceof ColumnDefinitionNode) {
+			ColumnDefinitionNode col = (ColumnDefinitionNode) node;
+			StringBuilder sb = new StringBuilder(className);
+			sb.append(" (").append(col.getColumnName()).append(": ");
+			sb.append(col.getDataType().getTypeName());
+			if (col.getDataType().getLength() != null) {
+				sb.append("(").append(col.getDataType().getLength()).append(")");
+			} else if (col.getDataType().getPrecision() != null) {
+				sb.append("(").append(col.getDataType().getPrecision());
+				if (col.getDataType().getScale() != null) {
+					sb.append(", ").append(col.getDataType().getScale());
+				}
+				sb.append(")");
+			}
+			// Add constraints
+			if (!col.getConstraints().isEmpty()) {
+				sb.append(" [");
+				for (int i = 0; i < col.getConstraints().size(); i++) {
+					if (i > 0) sb.append(", ");
+					ColumnDefinitionNode.ColumnConstraint constraint = col.getConstraints().get(i);
+					sb.append(constraint.getType().name());
+					if (constraint.getValue() != null) {
+						sb.append("=").append(constraint.getValue());
+					}
+				}
+				sb.append("]");
+			}
+			sb.append(")");
+			return sb.toString();
+		} else if (node instanceof TableConstraintNode) {
+			TableConstraintNode constraint = (TableConstraintNode) node;
+			StringBuilder sb = new StringBuilder(className);
+			sb.append(" (").append(constraint.getType().name());
+			if (constraint.getName() != null) {
+				sb.append(" ").append(constraint.getName());
+			}
+			if (constraint.getColumns() != null && !constraint.getColumns().isEmpty()) {
+				sb.append(" (").append(String.join(", ", constraint.getColumns())).append(")");
+			}
+			if (constraint.getReferencedTable() != null) {
+				sb.append(" REFERENCES ").append(constraint.getReferencedTable());
+				if (constraint.getReferencedColumns() != null && !constraint.getReferencedColumns().isEmpty()) {
+					sb.append("(").append(String.join(", ", constraint.getReferencedColumns())).append(")");
+				}
+			}
+			sb.append(")");
+			return sb.toString();
+		} else if (node instanceof StatementListNode) {
+			StatementListNode list = (StatementListNode) node;
+			return className + " (" + list.getStatements().size() + " statements)";
 		}
 
 		return className;
@@ -169,6 +219,12 @@ public class CompilerHelper {
 			}
 			if (create.getConstraints() != null) {
 				children.addAll(create.getConstraints());
+			}
+		} else if (node instanceof StatementListNode) {
+			StatementListNode list = (StatementListNode) node;
+			// Add all statements as children
+			if (list.getStatements() != null) {
+				children.addAll(list.getStatements());
 			}
 		}
 

@@ -12,20 +12,203 @@ public class SQLASTBuilder extends SQLParserBaseVisitor<ASTNode> {
     @Override
     public ASTNode visitSqlStatements(SQLParser.SqlStatementsContext ctx) {
         if (ctx.sqlStatement() != null && !ctx.sqlStatement().isEmpty()) {
-            ASTNode result = visit(ctx.sqlStatement(0));
-            if (result != null) {
-                System.out.println(">>>" + result.getClass().getSimpleName());
+            List<ASTNode> statements = new ArrayList<>();
+            for (SQLParser.SqlStatementContext stmtCtx : ctx.sqlStatement()) {
+                ASTNode stmt = visit(stmtCtx);
+                if (stmt != null) {
+                    statements.add(stmt);
+                }
             }
-            return result;
+            
+            // If there's only one statement, return it directly
+            if (statements.size() == 1) {
+                ASTNode result = statements.get(0);
+                System.out.println(">>>" + result.getClass().getSimpleName());
+                return result;
+            }
+            
+            // If there are multiple statements, return a StatementListNode
+            if (!statements.isEmpty()) {
+                System.out.println(">>>" + statements.size() + " statements");
+                return new StatementListNode(statements);
+            }
         }
         return null;
     }
     
     @Override
     public ASTNode visitDdlStatement(SQLParser.DdlStatementContext ctx) {
-        // For now, return a placeholder node for DDL statements
-        // TODO: Implement proper AST nodes for CREATE TABLE, DROP TABLE, etc.
+        // Dispatch to specific DDL statement visitor
+        if (ctx.createTableStatement() != null) {
+            return visit(ctx.createTableStatement());
+        } else if (ctx.dropTableStatement() != null) {
+            // TODO: Implement DROP TABLE
+            return new PlaceholderNode("DROP TABLE: " + ctx.getText());
+        } else if (ctx.alterTableStatement() != null) {
+            // TODO: Implement ALTER TABLE
+            return new PlaceholderNode("ALTER TABLE: " + ctx.getText());
+        } else if (ctx.createIndexStatement() != null) {
+            // TODO: Implement CREATE INDEX
+            return new PlaceholderNode("CREATE INDEX: " + ctx.getText());
+        } else if (ctx.dropIndexStatement() != null) {
+            // TODO: Implement DROP INDEX
+            return new PlaceholderNode("DROP INDEX: " + ctx.getText());
+        } else if (ctx.createDatabaseStatement() != null) {
+            // TODO: Implement CREATE DATABASE
+            return new PlaceholderNode("CREATE DATABASE: " + ctx.getText());
+        } else if (ctx.dropDatabaseStatement() != null) {
+            // TODO: Implement DROP DATABASE
+            return new PlaceholderNode("DROP DATABASE: " + ctx.getText());
+        }
         return new PlaceholderNode("DDL: " + ctx.getText());
+    }
+    
+    @Override
+    public ASTNode visitCreateTableStatement(SQLParser.CreateTableStatementContext ctx) {
+        String tableName = ctx.tableName().getText();
+        boolean ifNotExists = ctx.EXISTS() != null;
+        
+        List<ColumnDefinitionNode> columns = new ArrayList<>();
+        for (SQLParser.ColumnDefinitionContext colDef : ctx.columnDefinition()) {
+            columns.add(visitColumnDefinitionNode(colDef));
+        }
+        
+        List<TableConstraintNode> constraints = new ArrayList<>();
+        if (ctx.tableConstraint() != null) {
+            for (SQLParser.TableConstraintContext constraint : ctx.tableConstraint()) {
+                constraints.add(visitTableConstraintNode(constraint));
+            }
+        }
+        
+        return new CreateTableStatementNode(tableName, columns, constraints, ifNotExists);
+    }
+    
+    private ColumnDefinitionNode visitColumnDefinitionNode(SQLParser.ColumnDefinitionContext ctx) {
+        String columnName = ctx.columnName().getText();
+        ColumnDefinitionNode.DataType dataType = visitDataTypeNode(ctx.dataType());
+        
+        List<ColumnDefinitionNode.ColumnConstraint> constraints = new ArrayList<>();
+        for (SQLParser.ColumnConstraintContext constraint : ctx.columnConstraint()) {
+            constraints.add(visitColumnConstraintNode(constraint));
+        }
+        
+        return new ColumnDefinitionNode(columnName, dataType, constraints);
+    }
+    
+    private ColumnDefinitionNode.DataType visitDataTypeNode(SQLParser.DataTypeContext ctx) {
+        String typeName = ctx.getChild(0).getText();
+        
+        // Handle types with length parameter: VARCHAR(50), CHAR(10)
+        if (ctx.VARCHAR() != null || ctx.CHAR() != null) {
+            if (ctx.INTEGER_LITERAL() != null && !ctx.INTEGER_LITERAL().isEmpty()) {
+                return new ColumnDefinitionNode.DataType(typeName, 
+                    Integer.parseInt(ctx.INTEGER_LITERAL(0).getText()));
+            }
+            return new ColumnDefinitionNode.DataType(typeName);
+        }
+        
+        // Handle types with precision and scale: DECIMAL(10,2), NUMERIC(8,2)
+        if (ctx.DECIMAL() != null || ctx.NUMERIC() != null) {
+            if (ctx.INTEGER_LITERAL() != null && !ctx.INTEGER_LITERAL().isEmpty()) {
+                if (ctx.INTEGER_LITERAL().size() == 2) {
+                    return new ColumnDefinitionNode.DataType(typeName,
+                        Integer.parseInt(ctx.INTEGER_LITERAL(0).getText()),
+                        Integer.parseInt(ctx.INTEGER_LITERAL(1).getText()));
+                } else {
+                    return new ColumnDefinitionNode.DataType(typeName,
+                        Integer.parseInt(ctx.INTEGER_LITERAL(0).getText()),
+                        0);
+                }
+            }
+            return new ColumnDefinitionNode.DataType(typeName);
+        }
+        
+        // Simple types: INT, TEXT, DATE, etc.
+        return new ColumnDefinitionNode.DataType(typeName);
+    }
+    
+    private ColumnDefinitionNode.ColumnConstraint visitColumnConstraintNode(SQLParser.ColumnConstraintContext ctx) {
+        if (ctx.NOT() != null && ctx.NULL() != null) {
+            return new ColumnDefinitionNode.ColumnConstraint(
+                ColumnDefinitionNode.ColumnConstraint.ConstraintType.NOT_NULL);
+        } else if (ctx.NULL() != null) {
+            return new ColumnDefinitionNode.ColumnConstraint(
+                ColumnDefinitionNode.ColumnConstraint.ConstraintType.NULL);
+        } else if (ctx.PRIMARY() != null && ctx.KEY() != null) {
+            return new ColumnDefinitionNode.ColumnConstraint(
+                ColumnDefinitionNode.ColumnConstraint.ConstraintType.PRIMARY_KEY);
+        } else if (ctx.UNIQUE() != null) {
+            return new ColumnDefinitionNode.ColumnConstraint(
+                ColumnDefinitionNode.ColumnConstraint.ConstraintType.UNIQUE);
+        } else if (ctx.AUTO_INCREMENT() != null) {
+            return new ColumnDefinitionNode.ColumnConstraint(
+                ColumnDefinitionNode.ColumnConstraint.ConstraintType.AUTO_INCREMENT);
+        } else if (ctx.DEFAULT() != null) {
+            Object defaultValue;
+            if (ctx.literal() != null) {
+                ASTNode literalNode = visit(ctx.literal());
+                if (literalNode instanceof LiteralNode) {
+                    defaultValue = ((LiteralNode) literalNode).getValue();
+                } else {
+                    defaultValue = ctx.literal().getText();
+                }
+            } else if (ctx.NOW() != null || ctx.CURRENT_TIMESTAMP() != null) {
+                defaultValue = "CURRENT_TIMESTAMP";
+            } else {
+                defaultValue = null;
+            }
+            return new ColumnDefinitionNode.ColumnConstraint(
+                ColumnDefinitionNode.ColumnConstraint.ConstraintType.DEFAULT, defaultValue);
+        } else if (ctx.REFERENCES() != null) {
+            String refTable = ctx.tableName().getText();
+            String refColumn = ctx.columnName().getText();
+            return new ColumnDefinitionNode.ColumnConstraint(
+                ColumnDefinitionNode.ColumnConstraint.ConstraintType.FOREIGN_KEY, 
+                refTable + "(" + refColumn + ")");
+        }
+        return null;
+    }
+    
+    private TableConstraintNode visitTableConstraintNode(SQLParser.TableConstraintContext ctx) {
+        if (ctx.PRIMARY() != null) {
+            List<String> columns = new ArrayList<>();
+            for (SQLParser.ColumnNameContext col : ctx.columnName()) {
+                columns.add(col.getText());
+            }
+            return new TableConstraintNode(
+                TableConstraintNode.ConstraintType.PRIMARY_KEY, null, columns, null, null, null);
+        } else if (ctx.UNIQUE() != null) {
+            List<String> columns = new ArrayList<>();
+            for (SQLParser.ColumnNameContext col : ctx.columnName()) {
+                columns.add(col.getText());
+            }
+            String name = ctx.indexName() != null ? ctx.indexName().getText() : null;
+            return new TableConstraintNode(
+                TableConstraintNode.ConstraintType.UNIQUE, name, columns, null, null, null);
+        } else if (ctx.FOREIGN() != null) {
+            List<String> columns = new ArrayList<>();
+            List<String> refColumns = new ArrayList<>();
+            List<SQLParser.ColumnNameContext> allColumns = ctx.columnName();
+            
+            // Split columns between local and referenced
+            int halfPoint = allColumns.size() / 2;
+            for (int i = 0; i < halfPoint; i++) {
+                columns.add(allColumns.get(i).getText());
+            }
+            for (int i = halfPoint; i < allColumns.size(); i++) {
+                refColumns.add(allColumns.get(i).getText());
+            }
+            
+            String refTable = ctx.tableName().getText();
+            return new TableConstraintNode(
+                TableConstraintNode.ConstraintType.FOREIGN_KEY, null, columns, refTable, refColumns, null);
+        } else if (ctx.CHECK() != null) {
+            String name = ctx.constraintName() != null ? ctx.constraintName().getText() : null;
+            ASTNode checkExpr = visit(ctx.expression());
+            return new TableConstraintNode(
+                TableConstraintNode.ConstraintType.CHECK, name, null, null, null, checkExpr);
+        }
+        return null;
     }
     
     @Override
