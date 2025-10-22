@@ -58,16 +58,15 @@ public class SQLCompiler {
 			SQLParser.SqlStatementsContext tree = parser.sqlStatements();
 
 			// Print parse tree
-			System.out.println("=== PARSE TREE ===");
-			System.out.println(tree.toStringTree(parser));
-			System.out.println();
+			// System.out.println("=== PARSE TREE ===");
+			// System.out.println(tree.toStringTree(parser));
+			// System.out.println();
 
 			// Build and print AST
 			SQLASTBuilder astBuilder = new SQLASTBuilder();
 			ASTNode ast = astBuilder.visit(tree);
 
-			System.out.println("=== AST TREE ===");
-			CompilerHelper.printAST(ast, 0);
+			CompilerHelper.dump(ast);
 
 		} catch (Exception e) {
 			System.err.println("Error parsing SQL: " + e.getMessage());

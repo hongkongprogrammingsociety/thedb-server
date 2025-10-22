@@ -49,15 +49,11 @@
                         <goals>
                             <goal>antlr4</goal>
                         </goals>
-                        <configuration>
-                            <visitor>true</visitor>
-                            <listener>false</listener>
-                        </configuration>
                     </execution>
                 </executions>
 				<configuration>
 					<sourceDirectory>${basedir}/src/main/antlr</sourceDirectory>
-					<outputDirectory>${project.build.directory}/generated-sources/org/hkprog/thedb/antlr</outputDirectory>
+					<outputDirectory>${project.build.directory}/generated-sources/antlr4</outputDirectory>
 					<arguments>
 						<argument>-package</argument>
 						<argument>org.hkprog.thedb.antlr</argument>

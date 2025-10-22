@@ -12,6 +12,7 @@ public class SQLASTBuilder extends SQLParserBaseVisitor<ASTNode> {
     @Override
     public ASTNode visitSqlStatements(SQLParser.SqlStatementsContext ctx) {
         if (ctx.sqlStatement() != null && !ctx.sqlStatement().isEmpty()) {
+			System.out.println(">>>" +visit(ctx.sqlStatement(0)).getClass().getSimpleName());
             return visit(ctx.sqlStatement(0));
         }
         return null;
