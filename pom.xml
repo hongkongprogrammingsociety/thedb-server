@@ -53,7 +53,7 @@
                 </executions>
 				<configuration>
 					<sourceDirectory>${basedir}/src/main/antlr</sourceDirectory>
-					<outputDirectory>${project.build.directory}/generated-sources/antlr4</outputDirectory>
+					<outputDirectory>${project.build.directory}/generated-sources/antlr4/org/hkprog/thedb/antlr</outputDirectory>
 					<arguments>
 						<argument>-package</argument>
 						<argument>org.hkprog.thedb.antlr</argument>
