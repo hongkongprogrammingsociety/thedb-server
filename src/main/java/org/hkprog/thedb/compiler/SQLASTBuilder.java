@@ -23,13 +23,11 @@ public class SQLASTBuilder extends SQLParserBaseVisitor<ASTNode> {
             // If there's only one statement, return it directly
             if (statements.size() == 1) {
                 ASTNode result = statements.get(0);
-                System.out.println(">>>" + result.getClass().getSimpleName());
                 return result;
             }
             
             // If there are multiple statements, return a StatementListNode
             if (!statements.isEmpty()) {
-                System.out.println(">>>" + statements.size() + " statements");
                 return new StatementListNode(statements);
             }
         }
